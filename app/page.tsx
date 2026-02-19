@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const quotes = [
   {
@@ -105,24 +105,55 @@ const quotes = [
   }
 ];
 
+const CHAR_DELAY_MS = 35;
+
 export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [displayedText, setDisplayedText] = useState('');
+  const [showAuthor, setShowAuthor] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const fullText = quotes[currentIndex].text;
+    setDisplayedText('');
+    setShowAuthor(false);
+
+    let charIndex = 0;
+
+    const typeNextChar = () => {
+      charIndex++;
+      setDisplayedText(fullText.slice(0, charIndex));
+
+      if (charIndex < fullText.length) {
+        timeoutRef.current = setTimeout(typeNextChar, CHAR_DELAY_MS);
+      } else {
+        timeoutRef.current = setTimeout(() => setShowAuthor(true), 150);
+      }
+    };
+
+    timeoutRef.current = setTimeout(typeNextChar, CHAR_DELAY_MS);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [currentIndex]);
 
   const handleNextQuote = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % quotes.length);
   };
 
-  const currentQuote = quotes[currentIndex];
-
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-6">
       <main className="max-w-3xl w-full flex flex-col items-center gap-12">
         <div className="text-center space-y-8">
-          <blockquote className="text-2xl sm:text-3xl md:text-4xl font-light leading-relaxed text-zinc-100">
-            &ldquo;{currentQuote.text}&rdquo;
+          <blockquote className="text-2xl sm:text-3xl md:text-4xl font-light leading-relaxed text-zinc-100 min-h-[1em]">
+            &ldquo;{displayedText}&rdquo;
           </blockquote>
-          <cite className="block text-lg sm:text-xl text-zinc-500 not-italic">
-            — {currentQuote.author}
+          <cite
+            className="block text-lg sm:text-xl text-zinc-500 not-italic transition-opacity duration-700"
+            style={{ opacity: showAuthor ? 1 : 0 }}
+          >
+            — {quotes[currentIndex].author}
           </cite>
         </div>
 
